@@ -379,37 +379,19 @@ class Rubiks(Robot):
         if self.shutdown_flag:
             return
 
-        run_rgb_solver = True
+        from rubiks_rgb_solver import RubiksColorSolver
+        self.rgb_solver = RubiksColorSolver(False)
 
-        if self.server_username and self.server_ip and self.server_path:
-            output = Popen(
-                ['ssh',
-                 '%s@%s' % (self.server_username, self.server_ip),
-                 '%s/python/pyev3/rubiks_rgb_solver.py' % self.server_path,
-                 '--rgb',
-                 "'%s'" % json.dumps(self.colors)],
-                stdout=PIPE).communicate()[0]
-            output = output.strip().strip()
-            self.cube_kociemba = list(output)
+        if self.shutdown_flag:
+            self.rgb_solver.shutdown_flag = True
 
-            if self.cube_kociemba:
-                run_rgb_solver = False
-            else:
-                log.warning("Our connection to %s failed, we will run rubiks_rgb_solver locally" % self.server_ip)
-                self.leds.set_all('orange')
-
-        if run_rgb_solver:
-            from rubiks_rgb_solver import RubiksColorSolver
-            self.rgb_solver = RubiksColorSolver(False)
-
-            if self.shutdown_flag:
-                self.rgb_solver.shutdown_flag = True
-
-            self.rgb_solver.enter_scan_data(self.colors)
-            (self.cube_kociemba, self.cube_cubex) = self.rgb_solver.crunch_colors()
+        self.rgb_solver.enter_scan_data(self.colors)
+        (self.cube_kociemba, self.cube_cubex) = self.rgb_solver.crunch_colors()
 
         log.info("Scanned RGBs\n%s" % pformat(self.colors))
         log.info("Final Colors: %s" % self.cube_kociemba)
+
+        return self.cube_kociemba
 
     def move(self, face_down):
         position = self.state.index(face_down)
